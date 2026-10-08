@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}E-L · Today{% endblock %}
+
+{% macro area_tag(area) -%}
+<span class="tag"><span class="sq sq-sm" style="background: {{ area.color }}"></span>{{ area.name }}</span>
+{%- endmacro %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <div class="muted">{{ view.today.strftime("%A %d %B %Y") }}</div>
+    <h1>Today</h1>
+  </div>
+</header>
+
+<div class="row">
+  <section class="card card-dark flex-2" aria-labelledby="brief-h">
+    <div class="card-head">
+      <h2 id="brief-h">Morning brief</h2>
+      <span class="mono dim">{% if brief %}Hermes · Nemotron 3 Super · {{ brief.generated }}{% else %}Hermes · Nemotron 3 Super{% endif %}</span>
+    </div>
+    {% if brief %}
+    <ul class="brief">
+      {% for item in brief.items %}
+      <li>
+        <span class="brief-label">{% if item.area %}<span class="sq sq-sm" style="background: {{ item.area.dark }}"></span>{% endif %}{{ item.label }}</span>
+        <span class="brief-text">{{ item.text }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="dim">No brief yet today. E-L gives Hermes the facts on this page and saves what it writes to <span class="mono">E-L/Briefs/</span> in your vault.</p>
+    {% endif %}
+    <div class="brief-actions">
+      <button type="button" id="brief-button" class="btn-ghost">{% if brief %}Rewrite the brief{% else %}Write today's brief{% endif %}</button>
+      <span id="brief-status" class="dim small" role="status" aria-live="polite"></span>
+    </div>
+    <form id="ask-form" class="ask">
+      <label for="ask-input" class="sr">Ask E-L a question</label>
+      <input id="ask-input" name="question" type="text" autocomplete="off" required maxlength="2000"
+             placeholder="e.g. what should I do first today?">
+      <button type="submit">Ask E-L</button>
+    </form>
+    <div id="ask-answer" class="answer" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <section class="card flex-1" aria-labelledby="dates-h">
+    <div class="card-head">
+      <h2 id="dates-h">Coming up</h2>
+      <span class="muted small">Next 10 weeks</span>
+    </div>
+    {% if view.coming_up %}
+    <ol class="list">
+      {% for item in view.coming_up %}
+      <li class="list-row">
+        <span class="mono date-col">{{ item.day.strftime("%a") }}<br>{{ item.day.strftime("%d %b") }}</span>
+        <span class="grow stack">
+          <span>{{ item.title }}{% if item.time %}, {{ item.time }}{% endif %}</span>
+          {{ area_tag(item.area) }}
+        </span>
+        {% if item.days < 0 %}<span class="badge-overdue">Overdue</span>
+        {% else %}<span class="mono muted small">{{ item.days }}d</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <p class="muted">Nothing dated yet. Add notes to <span class="mono">Calendar/</span>, or put 📅 YYYY-MM-DD on a task.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section aria-labelledby="areas-h" class="stack-lg">
+  <h2 id="areas-h">Areas</h2>
+  <div class="grid-areas">
+    {% for card in view.cards %}
+    <a href="/area/{{ card.area.key }}" class="card tile{% if not card.open and not card.done %} tile-empty{% endif %}">
+      <span class="tile-head">
+        <span class="sq sq-lg" style="background: {{ card.area.color }}"></span>
+        <span class="grow strong">{{ card.area.name }}</span>
+      </span>
+      <span class="headline"><span class="mono big">{{ card.headline }}</span><span class="muted">{{ card.headline_label }}</span></span>
+      {% if card.lines %}<span class="stack small soft">{% for line in card.lines %}<span>{{ line }}</span>{% endfor %}</span>{% endif %}
+      {% if card.next_task %}<span class="tile-next small"><span class="muted">Next: </span>{{ card.next_task.task.text }}</span>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="row">
+  <section class="card flex-3" aria-labelledby="next-h">
+    <div class="card-head">
+      <h2 id="next-h">Next up, across every area</h2>
+      <span class="muted small">Overdue, then dated, then newest</span>
+    </div>
+    <ul class="list">
+      {% for item in view.next_up %}
+      <li class="list-row list-row-top">
+        <span class="grow stack">
+          <span>{{ item.task.text }}</span>
+          <span class="small muted">{{ area_tag(item.area) }} · <span class="mono">{{ item.task.path }}</span>{% if item.overdue %} · <span class="overdue">overdue</span>{% endif %}</span>
+        </span>
+      </li>
+      {% else %}
+      <li class="muted">No open tasks.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card flex-2" aria-labelledby="recent-h">
+    <div class="card-head">
+      <h2 id="recent-h">Recent sessions</h2>
+      <span class="muted small">From Claude Log</span>
+    </div>
+    <ol class="list">
+      {% for item in view.sessions %}
+      <li class="list-row list-row-top">
+        <span class="mono muted small date-col">{{ item.session.day.strftime("%d %b") if item.session.day }} {{ item.session.time }}</span>
+        <span class="grow stack"><span>{{ item.session.title }}</span>{{ area_tag(item.area) }}</span>
+      </li>
+      {% else %}
+      <li class="muted">No sessions logged yet.</li>
+      {% endfor %}
+    </ol>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', path='ask.js') }}"></script>{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}E-L · {{ card.area.name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <div class="muted"><a href="/" class="muted">Today</a> / {{ card.area.name }}</div>
+    <h1 class="with-sq"><span class="sq sq-xl" style="background: {{ card.area.color }}"></span>{{ card.area.name }}</h1>
+    {% if card.area.description %}<div class="muted">{{ card.area.description }}</div>{% endif %}
+  </div>
+</header>
+
+<div class="grid-tiles">
+  <div class="card kpi"><span class="muted small">Open tasks</span><span class="mono big">{{ card.open }}</span><span class="muted small">{{ card.done }} done</span></div>
+  <div class="card kpi"><span class="muted small">Headline</span><span class="mono big">{{ card.headline }}</span><span class="muted small">{{ card.headline_label }}</span></div>
+  <div class="card kpi"><span class="muted small">Last active</span><span class="mono big">{{ card.last_active.strftime("%d %b") if card.last_active else "–" }}</span><span class="muted small">{{ sessions|length }} logged sessions shown</span></div>
+</div>
+
+<div class="row">
+  <section class="card flex-3" aria-labelledby="tasks-h">
+    <div class="card-head"><h2 id="tasks-h">Open tasks</h2><span class="muted small">Read from the vault; ticking arrives with write-back</span></div>
+    <ul class="list">
+      {% for task in tasks %}
+      <li class="list-row list-row-top">
+        <span class="grow stack">
+          <span>{{ task.text }}</span>
+          <span class="small muted mono">{{ task.path }}:{{ task.line }}{% if task.due %} · due {{ task.due|short_date }}{% endif %}</span>
+        </span>
+      </li>
+      {% else %}
+      <li class="muted">No open tasks.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <div class="flex-2 stack-lg">
+    <section class="card" aria-labelledby="dates-h">
+      <h2 id="dates-h">Coming up</h2>
+      <ol class="list">
+        {% for item in events %}
+        <li class="list-row"><span class="grow">{{ item.title }}</span><span class="mono muted small">{{ item.day|short_date }}</span></li>
+        {% else %}
+        <li class="muted">Nothing dated.</li>
+        {% endfor %}
+      </ol>
+    </section>
+    <section class="card" aria-labelledby="sessions-h">
+      <h2 id="sessions-h">Recent sessions</h2>
+      <ol class="list">
+        {% for session in sessions %}
+        <li class="list-row list-row-top"><span class="mono muted small date-col">{{ session.day.strftime("%d %b") if session.day }}</span><span class="grow">{{ session.title }}</span></li>
+        {% else %}
+        <li class="muted">None logged.</li>
+        {% endfor %}
+      </ol>
+    </section>
+  </div>
+</div>
+{% endblock %}

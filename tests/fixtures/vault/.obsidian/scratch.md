@@ -1,0 +1,1 @@
+- [ ] hidden, Obsidian's own folder is skipped

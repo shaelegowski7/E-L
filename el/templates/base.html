@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}E-L{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', path='el.css') }}">
+</head>
+<body>
+<div class="shell">
+  <nav class="side" aria-label="E-L">
+    <div class="brand">
+      <span class="brand-mark">E-L</span>
+      <span class="brand-text"><span class="brand-name">E-L</span><span class="brand-sub">Personal assistant</span></span>
+    </div>
+    <a href="/" class="nav-link{% if active == 'today' %} is-active{% endif %}"{% if active == 'today' %} aria-current="page"{% endif %}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+      <span>Today</span>
+    </a>
+    <div class="nav-label">Areas</div>
+    {% for card in view.cards %}
+    <a href="/area/{{ card.area.key }}" class="nav-link{% if active == card.area.key %} is-active{% endif %}"{% if active == card.area.key %} aria-current="page"{% endif %}>
+      <span class="sq" style="background: {{ card.area.dark }}"></span>
+      <span class="grow">{{ card.area.name }}</span>
+      {% if card.open %}<span class="count">{{ card.open }}</span>{% endif %}
+    </a>
+    {% endfor %}
+    <div class="nav-label">Not in an area</div>
+    <a href="/area/unsorted" class="nav-link{% if active == 'unsorted' %} is-active{% endif %}">
+      <span class="sq sq-dashed"></span>
+      <span class="grow nav-two"><span>Unsorted</span><span class="nav-sub">{{ view.unsorted.area.description }}</span></span>
+      {% if view.unsorted.open %}<span class="count">{{ view.unsorted.open }}</span>{% endif %}
+    </a>
+    <div class="side-foot">
+      <span>Vault · {{ view.note_count }} notes</span>
+      <span>Hermes Agent · Nemotron 3 Super</span>
+      <span>Sandbox: NVIDIA OpenShell</span>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="wrap">
+      <nav class="topnav" aria-label="Areas">
+        <a href="/" class="pill{% if active == 'today' %} is-active{% endif %}">Today</a>
+        {% for card in view.cards %}<a href="/area/{{ card.area.key }}" class="pill{% if active == card.area.key %} is-active{% endif %}">{{ card.area.name }}</a>{% endfor %}
+      </nav>
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>
