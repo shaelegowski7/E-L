@@ -50,8 +50,17 @@ rsync -a --prune-empty-dirs \
   --include='*/' --include='*.md' --exclude='*' \
   "$VAULT/" "$STAGE/"
 
+# Upload beside the live copy, then swap, so Hermes never sees a missing vault mid-sync.
 nemohermes "$SANDBOX" exec --no-tty --timeout 60 -- \
-  sh -c "rm -rf '$DEST_PARENT/Obsidian Vault' && mkdir -p '$DEST_PARENT'"
-nemohermes "$SANDBOX" upload "$STAGE" "$DEST_PARENT/"
+  sh -c "rm -rf '$DEST_PARENT/.incoming' && mkdir -p '$DEST_PARENT/.incoming'"
+nemohermes "$SANDBOX" upload "$STAGE" "$DEST_PARENT/.incoming/"
+nemohermes "$SANDBOX" exec --no-tty --timeout 60 -- sh -c "
+  set -e
+  cd '$DEST_PARENT'
+  rm -rf .previous
+  if [ -d 'Obsidian Vault' ]; then mv 'Obsidian Vault' .previous; fi
+  mv '.incoming/Obsidian Vault' 'Obsidian Vault'
+  rm -rf .previous .incoming
+"
 
 echo "synced $(find "$STAGE" -name '*.md' | wc -l) notes to $SANDBOX:$DEST_PARENT/Obsidian Vault"

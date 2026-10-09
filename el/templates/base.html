@@ -36,6 +36,14 @@
     </a>
     <div class="side-foot">
       <span>Vault · {{ view.note_count }} notes</span>
+      {% if sync %}
+      <span{% if sync.last_error %} title="{{ sync.last_error }}"{% endif %}>
+        {%- if sync.running %}Hermes's copy: syncing…
+        {%- elif sync.last_error %}Hermes's copy: sync failed
+        {%- elif sync.synced_at %}Hermes's copy: synced {{ sync.synced_at.strftime("%H:%M") }}
+        {%- else %}Hermes's copy: not synced yet{% endif -%}
+      </span>
+      {% endif %}
       <span>Hermes Agent · Nemotron 3 Super</span>
       <span>Sandbox: NVIDIA OpenShell</span>
     </div>

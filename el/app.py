@@ -5,6 +5,9 @@ in Obsidian show up on refresh.
 """
 from __future__ import annotations
 
+import asyncio
+import logging
+from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 
@@ -18,16 +21,48 @@ from el.areas import AreaIndex, load_areas
 from el.brief import brief_facts, instructions, load_brief, parse_items, save_brief
 from el.config import get_settings
 from el.hermes import Hermes, HermesError, vault_map
+from el.sync import VaultSync
 from el.today import build_today, short_date
 from el.vault import Vault
 
 HERE = Path(__file__).parent
-app = FastAPI(title="E-L")
+log = logging.getLogger("el")
+_hermes: Hermes | None = None
+_sync: VaultSync | None = None
+
+
+def _vault_sync() -> VaultSync:
+    global _sync
+    settings = get_settings()
+    if _sync is None or _sync.root != settings.vault:
+        _sync = VaultSync(settings.vault, settings.sandbox)
+    return _sync
+
+
+async def _sync_loop(interval: int) -> None:
+    """Keep Hermes's copy of the vault current while the app runs."""
+    while True:
+        try:
+            if await asyncio.to_thread(_vault_sync().sync_if_changed) == "failed":
+                log.warning("vault sync failed: %s", _vault_sync().status().last_error)
+        except Exception:  # keep checking whatever went wrong this time
+            log.exception("vault sync check crashed")
+        await asyncio.sleep(interval)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    interval = get_settings().sync_interval
+    task = asyncio.create_task(_sync_loop(interval)) if interval > 0 else None
+    yield
+    if task:
+        task.cancel()
+
+
+app = FastAPI(title="E-L", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
 templates.env.filters["short_date"] = short_date
-
-_hermes: Hermes | None = None
 
 
 def _today() -> date:
@@ -52,7 +87,9 @@ def today_page(request: Request):
     vault, index = _load()
     view = build_today(vault, index, _today())
     brief = load_brief(vault, index, view.today)
-    return templates.TemplateResponse(request, "today.html", {"view": view, "brief": brief, "active": "today"})
+    return templates.TemplateResponse(request, "today.html", {
+        "view": view, "brief": brief, "sync": _vault_sync().status(), "active": "today",
+    })
 
 
 @app.get("/area/{key}", response_class=HTMLResponse)
@@ -68,7 +105,7 @@ def area_page(request: Request, key: str):
     events = [d for d in view.coming_up if d.area.key == key]
     return templates.TemplateResponse(request, "area.html", {
         "view": view, "card": card, "tasks": tasks, "sessions": sessions,
-        "events": events, "active": key,
+        "events": events, "sync": _vault_sync().status(), "active": key,
     })
 
 
@@ -85,6 +122,8 @@ class Question(BaseModel):
 @app.post("/api/ask")
 def ask(body: Question):
     _, index = _load()
+    if get_settings().sync_interval > 0:
+        _vault_sync().sync_if_changed()  # so a note edited a moment ago is in Hermes's copy
     try:
         answer = _hermes_client().ask(body.question, system=vault_map(index))
     except HermesError as exc:
@@ -107,6 +146,18 @@ def write_brief():
     bullets = "\n".join(f"- **{item.label}:** {item.text}" if item.label else f"- {item.text}" for item in items)
     path = save_brief(get_settings().vault, view.today, bullets)
     return {"saved": path.name, "items": [{"label": i.label, "text": i.text} for i in items]}
+
+
+@app.get("/api/sync")
+def sync_status():
+    return _vault_sync().status()
+
+
+@app.post("/api/sync")
+def sync_now():
+    """Sync Hermes's vault copy now if the notes changed since the last sync."""
+    sync = _vault_sync()
+    return {"result": sync.sync_if_changed(), "status": sync.status()}
 
 
 @app.get("/healthz")

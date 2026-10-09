@@ -19,7 +19,7 @@ Obsidian vault ──► E-L web app (FastAPI) ──► Today page, area pages
 
 - **Figures and lists come straight from the vault.** The web app reads the vault directly for counts, dates and task lists, so no model is involved and they're always exact.
 - **Questions go to Hermes.** It answers with Nemotron 3 Super through Nebius Token Factory, reading the vault with its Obsidian skill.
-- **The sandbox never sees the real vault.** `scripts/sync_vault.sh` copies the notes in. OpenShell limits the sandbox to that folder and an approved list of network destinations, and API keys stay outside it.
+- **The sandbox never sees the real vault.** `scripts/sync_vault.sh` copies the notes in, and while the app runs it re-syncs whenever a note changes (checked every 2 minutes and before each question). OpenShell limits the sandbox to that folder and an approved list of network destinations, and API keys stay outside it.
 
 ## Stack
 
@@ -48,7 +48,7 @@ Obsidian vault ──► E-L web app (FastAPI) ──► Today page, area pages
 4. **Run, inside Ubuntu,** after installing [uv](https://docs.astral.sh/uv/):
    ```bash
    bash scripts/test.sh   # tests, against a small made-up vault in tests/fixtures
-   bash scripts/dev.sh    # syncs the vault into the sandbox, then serves http://127.0.0.1:8000
+   bash scripts/dev.sh    # serves http://127.0.0.1:8000 and keeps the sandbox's vault copy current
    ```
 
 If Ask E-L says Hermes isn't reachable, run `nemohermes e-l recover` in Ubuntu. It restores the port forward after a restart.

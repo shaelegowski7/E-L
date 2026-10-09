@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-_KEYS = ("EL_VAULT", "EL_SANDBOX", "EL_HERMES_URL", "EL_HERMES_TOKEN")
+_KEYS = ("EL_VAULT", "EL_SANDBOX", "EL_HERMES_URL", "EL_HERMES_TOKEN", "EL_SYNC_INTERVAL")
 
 
 def _read_dotenv(path: Path) -> dict[str, str]:
@@ -28,6 +28,7 @@ class Settings:
     sandbox: str
     hermes_url: str
     hermes_token: str | None
+    sync_interval: int  # seconds between vault-copy checks; 0 turns syncing off
 
 
 @lru_cache(maxsize=1)
@@ -37,6 +38,11 @@ def get_settings() -> Settings:
     def get(key: str, default: str = "") -> str:
         return os.environ.get(key) or dotenv.get(key) or default
 
+    try:
+        sync_interval = max(0, int(get("EL_SYNC_INTERVAL", "120")))
+    except ValueError:
+        sync_interval = 120
+
     vault = get("EL_VAULT")
     if not vault:
         raise RuntimeError("EL_VAULT is not set. Add it to .env (see .env.example).")
@@ -45,4 +51,5 @@ def get_settings() -> Settings:
         sandbox=get("EL_SANDBOX", "e-l"),
         hermes_url=get("EL_HERMES_URL", "http://127.0.0.1:8642/v1").rstrip("/"),
         hermes_token=get("EL_HERMES_TOKEN") or None,
+        sync_interval=sync_interval,
     )
